@@ -16,52 +16,87 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 
-from PDDL import PDDL_Parser
+from .PDDL import PDDL_Parser
+import time
+from utils import (get_static_and_dynamic_preidcates, get_timeless_truth,
+                   check_negative_preconditions, check_positive_preconditions, check_action_parameters, predicate_to_string)
 
 
-class Planner:
+class SATPlanner:
 
-    # -----------------------------------------------
-    # Solve
-    # -----------------------------------------------
+    def __init__(self, domain_path, problem_path):
+        parser = PDDL_Parser()
+        parser.parse_domain(domain_path)
+        parser.parse_problem(problem_path)
+        self.state = parser.state
+        self.predicates = parser.predicates
+        self.actions = parser.actions
+        self.objects = parser.objects
+        self.types = parser.types
+
+    def filter_valid_actions(self, fixed_predicates, timeless_truth):
+        filtered_actions = []
+
+        for action in self.actions:
+            for groundified_action in action.groundify(self.objects, self.types):
+
+                valid = check_positive_preconditions(groundified_action, fixed_predicates, timeless_truth) and check_negative_preconditions(
+                    groundified_action, fixed_predicates, timeless_truth) and check_action_parameters(groundified_action)
+                if valid:
+                    filtered_actions.append(groundified_action)
+
+        return filtered_actions
 
     def solve(self, domain, problem):
-        # Parser
-        parser = PDDL_Parser()
-        parser.parse_domain(domain)
-        parser.parse_problem(problem)
-        # Parsed data
-        state = parser.state
-        goal_pos = parser.positive_goals
-        goal_not = parser.negative_goals
-        # Do nothing
-        if self.applicable(state, goal_pos, goal_not):
-            return []
-        # Grounding process
-        ground_actions = []
-        for action in parser.actions:
-            for act in action.groundify(parser.objects, parser.types):
-                ground_actions.append(act)
-        # Search
-        visited = set([state])
-        fringe = [state, None]
-        while fringe:
-            state = fringe.pop(0)
-            plan = fringe.pop(0)
-            for act in ground_actions:
-                if self.applicable(state, act.positive_preconditions, act.negative_preconditions):
-                    new_state = self.apply(state, act.add_effects, act.del_effects)
-                    if new_state not in visited:
-                        if self.applicable(new_state, goal_pos, goal_not):
-                            full_plan = [act]
-                            while plan:
-                                act, plan = plan
-                                full_plan.insert(0, act)
-                            return full_plan
-                        visited.add(new_state)
-                        fringe.append(new_state)
-                        fringe.append((act, plan))
-        return None
+        # Initialise clock
+        t0 = time.time()
+
+        static_predicates, dynamic_predicates = get_static_and_dynamic_preidcates(
+            self.predicates, self.actions)
+
+        timeless_truth = get_timeless_truth(self.state, static_predicates)
+        valid_groundified_actions = self.filter_valid_actions(
+            static_predicates, timeless_truth)
+
+        current_dynamic_predicates = []
+        for pred in self.state:
+            if pred[0] in dynamic_predicates:
+                current_dynamic_predicates.appennd(predicate_to_string(pred))
+
+        # # Parsed data
+        # state = parser.state
+        # goal_pos = parser.positive_goals
+        # goal_not = parser.negative_goals
+        # # Do nothing
+        # if self.applicable(state, goal_pos, goal_not):
+
+        #     return []
+        # # Grounding process
+        # ground_actions = []
+        # for action in parser.actions:
+        #     for act in action.groundify(parser.objects, parser.types):
+        #         ground_actions.append(act)
+        # # Search
+        # visited = set([state])
+        # fringe = [state, None]
+        # while fringe:
+        #     state = fringe.pop(0)
+        #     plan = fringe.pop(0)
+        #     for act in ground_actions:
+        #         if self.applicable(state, act.positive_preconditions, act.negative_preconditions):
+        #             new_state = self.apply(
+        #                 state, act.add_effects, act.del_effects)
+        #             if new_state not in visited:
+        #                 if self.applicable(new_state, goal_pos, goal_not):
+        #                     full_plan = [act]
+        #                     while plan:
+        #                         act, plan = plan
+        #                         full_plan.insert(0, act)
+        #                     return full_plan
+        #                 visited.add(new_state)
+        #                 fringe.append(new_state)
+        #                 fringe.append((act, plan))
+        # return None
 
     # -----------------------------------------------
     # Applicable
@@ -82,7 +117,8 @@ class Planner:
 # Main
 # -----------------------------------------------
 if __name__ == '__main__':
-    import sys, time
+    import sys
+    import time
     start_time = time.time()
     domain = sys.argv[1]
     problem = sys.argv[2]
@@ -93,6 +129,7 @@ if __name__ == '__main__':
     if plan is not None:
         print('plan:')
         for act in plan:
-            print(act if verbose else act.name + ' ' + ' '.join(act.parameters))
+            print(act if verbose else act.name +
+                  ' ' + ' '.join(act.parameters))
     else:
         sys.exit('No plan was found')
