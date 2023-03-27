@@ -19,7 +19,8 @@
 from .PDDL import PDDL_Parser
 import time
 from utils import (get_static_and_dynamic_preidcates, get_timeless_truth,
-                   check_negative_preconditions, check_positive_preconditions, check_action_parameters, predicate_to_string)
+                   check_negative_preconditions, check_positive_preconditions,
+                   check_action_parameters, predicate_to_string, action_to_string)
 
 
 class SATPlanner:
@@ -33,6 +34,11 @@ class SATPlanner:
         self.actions = parser.actions
         self.objects = parser.objects
         self.types = parser.types
+        self.step = 0
+        self.idx = 0
+        self.reverse_index = {}
+        self.dict_positive_preconditions = {}
+        self.dict_negative_preconditions = {}
 
     def filter_valid_actions(self, fixed_predicates, timeless_truth):
         filtered_actions = []
@@ -72,6 +78,48 @@ class SATPlanner:
                         break
         return fulfilled_neg_precond
 
+    def update_clauses(self, satisfied_positive_preconditions, satisfied_negative_preconditions, action, new_actions, new_clause, new_predicates, new_variables):
+        new_actions.append(action)
+        new_variable_name = action_to_string(
+            action) + '.' + str(self.step)
+        new_variables.append(new_variable_name)
+        self.reverse_index[new_variable_name] = self.idx
+        idx1 = self.idx
+        self.idx += 1
+
+        for pred in satisfied_positive_preconditions:
+            new_clause.append(
+                [-idx1, self.reverse_index[pred+'.'+str(self.step-1)]])
+        for pred in satisfied_negative_preconditions:
+            new_clause.append(
+                [-idx1, -self.reverse_index[pred+'.'+str(self.step-1)]])
+        for pos_effect in action.add_effects:
+            positive_predicate = predicate_to_string(pos_effect)
+            if positive_predicate not in new_predicates:
+                new_predicates.append(positive_predicate)
+                new_variables.append(
+                    positive_predicate + '.' + str(self.step))
+                self.reverse_index[positive_predicate +
+                                   '.' + str(self.step)] = self.idx
+                self.dict_positive_preconditions[self.idx] = []
+                self.dict_negative_preconditions[self.idx] = []
+                idx += 1
+            idx2 = self.reverse_index[positive_predicate +
+                                      '.' + str(self.step)]
+            self.dict_positive_preconditions[idx2].append(
+                idx1)
+            new_clause.append([-idx1, idx2])
+
+    def update_predicates(self, old_predicates, new_predicates, new_variables):
+        for old_predicate in old_predicates:
+            if old_predicate not in new_predicates:
+                new_predicates.append(old_predicate)
+                new_variables.append(old_predicate+'.'+str(self.step))
+                self.reverse_index[old_predicate+'.'+str(self.step)] = self.idx
+                self.dict_positive_preconditions[self.idx] = []
+                self.dict_negative_preconditions[self.idx] = []
+                self.idx += 1
+
     def solve(self, domain, problem):
         # Initialise clock
         t0 = time.time()
@@ -88,22 +136,39 @@ class SATPlanner:
             if pred[0] in dynamic_predicates:
                 old_dynamic_predicates.appennd(predicate_to_string(pred))
 
-        reverse_index = {}
-        idx = 1
         variables = [None]
         old_clause = []
+        self.idx = 1
+
         for pred in old_dynamic_predicates:
-            reverse_index[pred+'.0'] = idx
+            self.reverse_index[pred+'.0'] = idx
             variables.append(pred+'.0')
             old_clause.append([idx])
             idx += 1
 
-        for action in valid_groundified_actions:
-            satisfied_pos_precond, all_pos_precond_satisfied = self.get_fulfilled_positive_preconditions(
-                action, dynamic_predicates, old_dynamic_predicates)
-            if all_pos_precond_satisfied:
-                satisfied_neg_precond = self.get_fulfilled_negative_preconditions(
+        while True:
+            new_clause = []
+            self.step += 1
+
+            print('Step {}'.format(self.step))
+            print('======================')
+
+            new_variables = []
+            new_predicates = []
+            new_actions = []
+
+            for action in valid_groundified_actions:
+                satisfied_pos_precond, all_pos_precond_satisfied = self.get_fulfilled_positive_preconditions(
                     action, dynamic_predicates, old_dynamic_predicates)
+                if all_pos_precond_satisfied:
+                    satisfied_neg_precond = self.get_fulfilled_negative_preconditions(
+                        action, dynamic_predicates, old_dynamic_predicates)
+
+                    self.update_clauses(satisfied_pos_precond, satisfied_neg_precond,
+                                        action, new_actions, new_clause, new_predicates, new_variables)
+
+            self.update_predicates(
+                old_dynamic_predicates, new_predicates, new_variables)
 
         # # Parsed data
         # state = parser.state
