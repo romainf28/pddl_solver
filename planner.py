@@ -103,7 +103,7 @@ class SATPlanner:
                                    '.' + str(self.step)] = self.idx
                 self.dict_positive_preconditions[self.idx] = []
                 self.dict_negative_preconditions[self.idx] = []
-                idx += 1
+                self.idx += 1
             idx2 = self.reverse_index[positive_predicate +
                                       '.' + str(self.step)]
             self.dict_positive_preconditions[idx2].append(
@@ -141,10 +141,10 @@ class SATPlanner:
         self.idx = 1
 
         for pred in old_dynamic_predicates:
-            self.reverse_index[pred+'.0'] = idx
+            self.reverse_index[pred+'.0'] = self.idx
             variables.append(pred+'.0')
-            old_clause.append([idx])
-            idx += 1
+            old_clause.append([self.idx])
+            self.idx += 1
 
         while True:
             new_clause = []
