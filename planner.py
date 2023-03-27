@@ -47,6 +47,31 @@ class SATPlanner:
 
         return filtered_actions
 
+    def get_fulfilled_positive_preconditions(self, action, dynamic_predicates, old_dynamic_predicates):
+        fulfilled_pos_precond = []
+        all_positive_precond_fulfilled = True
+        for positive_precondition in action.positive_preconditions:
+            if positive_precondition[0] in dynamic_predicates:
+                valid_precond = False
+                for pred in old_dynamic_predicates:
+                    if pred == predicate_to_string(positive_precondition):
+                        fulfilled_pos_precond.append(pred)
+                        valid_precond = True
+                        break
+                if not (valid_precond):
+                    all_positive_precond_fulfilled = False
+        return fulfilled_pos_precond, all_positive_precond_fulfilled
+
+    def get_fulfilled_negative_preconditions(self, action, dynamic_predicates, old_dynamic_predicates):
+        fulfilled_neg_precond = []
+        for negative_precondition in action.negative_preconditions:
+            if negative_precondition[0] in dynamic_predicates:
+                for pred in old_dynamic_predicates:
+                    if pred == predicate_to_string(negative_precondition):
+                        fulfilled_neg_precond.append(pred)
+                        break
+        return fulfilled_neg_precond
+
     def solve(self, domain, problem):
         # Initialise clock
         t0 = time.time()
@@ -58,10 +83,27 @@ class SATPlanner:
         valid_groundified_actions = self.filter_valid_actions(
             static_predicates, timeless_truth)
 
-        current_dynamic_predicates = []
+        old_dynamic_predicates = []
         for pred in self.state:
             if pred[0] in dynamic_predicates:
-                current_dynamic_predicates.appennd(predicate_to_string(pred))
+                old_dynamic_predicates.appennd(predicate_to_string(pred))
+
+        reverse_index = {}
+        idx = 1
+        variables = [None]
+        old_clause = []
+        for pred in old_dynamic_predicates:
+            reverse_index[pred+'.0'] = idx
+            variables.append(pred+'.0')
+            old_clause.append([idx])
+            idx += 1
+
+        for action in valid_groundified_actions:
+            satisfied_pos_precond, all_pos_precond_satisfied = self.get_fulfilled_positive_preconditions(
+                action, dynamic_predicates, old_dynamic_predicates)
+            if all_pos_precond_satisfied:
+                satisfied_neg_precond = self.get_fulfilled_negative_preconditions(
+                    action, dynamic_predicates, old_dynamic_predicates)
 
         # # Parsed data
         # state = parser.state
