@@ -15,25 +15,19 @@ def is_applicable(state, positive_preconditions, negative_preconditions):
     return positive_preconditions.issubset(state) and negative_preconditions.isdisjoint(state)
 
 
-def get_static_and_dynamic_preidcates(predicates, actions):
+def get_static_and_dynamic_predicates(predicates, actions):
     '''
     Splits predicates into dynamic predicates (ie predicates whihch appear in the effects of an action) and
     static predicates (ie predicates which truth value does not change through time)
     '''
     static_predicates = []
     dynamic_predicates = []
+    action_predicates = set()
+    for action in actions:
+        action_predicates.update(p[0] for p in action.add_effects)
+        action_predicates.update(p[0] for p in action.del_effects)
     for pred in predicates:
-        dynamic = False
-        for action in actions:
-            for pos_effect in action.add_effects:
-                if pos_effect[0] == pred:
-                    dynamic = True
-                    break
-            for neg_effect in action.del_effects:
-                if neg_effect[0] == pred:
-                    dynamic = True
-                    break
-        if dynamic:
+        if pred in action_predicates:
             dynamic_predicates.append(pred)
         else:
             static_predicates.append(pred)
@@ -52,6 +46,9 @@ def get_timeless_truth(initial_state, static_predicates):
 
 
 def check_positive_preconditions(groundified_action, static_predicates, timeless_truth):
+    '''
+    Checks if all positive preconditions of a groundified action are static predicates which were satisfied in the initial state
+    '''
     for positive_precond in groundified_action.positive_preconditions:
         if positive_precond[0] in static_predicates and positive_precond not in timeless_truth:
             return False
@@ -59,6 +56,9 @@ def check_positive_preconditions(groundified_action, static_predicates, timeless
 
 
 def check_negative_preconditions(groundified_action, static_predicates, timeless_truth):
+    '''
+    Checks if all negative preconditions of a groundified action are static predicates which were not satisfied in the initial state
+    '''
     for negative_precond in groundified_action.negative_preconditions:
         if negative_precond[0] in static_predicates and negative_precond in timeless_truth:
             return False
@@ -66,6 +66,9 @@ def check_negative_preconditions(groundified_action, static_predicates, timeless
 
 
 def check_action_parameters(groundified_action):
+    '''
+    Checks if a groundified action has duplicate parameters
+    '''
     parameters = []
     for param in groundified_action.parameters:
         if param not in parameters:
@@ -76,4 +79,14 @@ def check_action_parameters(groundified_action):
 
 
 def predicate_to_string(predicate):
+    '''
+    Converts a predicate to a more convenient string representation 
+    '''
     return '.'.join(predicate)
+
+
+def action_to_string(action):
+    '''
+    Converts an action to a more convenient string representation
+    '''
+    return action.name + '.' + '.'.join(action.parameters)
