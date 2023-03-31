@@ -16,9 +16,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 
-from .PDDL import PDDL_Parser
+from PDDL import PDDL_Parser
 import time
-from utils import (get_static_and_dynamic_preidcates, get_timeless_truth,
+from utils import (get_static_and_dynamic_predicates, get_timeless_truth,
                    check_negative_preconditions, check_positive_preconditions,
                    check_action_parameters, predicate_to_string, action_to_string)
 
@@ -120,11 +120,31 @@ class SATPlanner:
                 self.dict_negative_preconditions[self.idx] = []
                 self.idx += 1
 
-    def solve(self, domain, problem):
+    def update_actions(self, new_actions, new_predicates, new_clause):
+        for action in new_actions:
+            idx1 = self.reverse_index[action_to_string(
+                action)+'.'+str(self.step)]
+            for negative_effect in action.del_effects:
+                pred = predicate_to_string(negative_effect)
+                if pred in new_predicates:
+                    idx2 = self.reverse_index[pred+'.'+str(self.step)]
+                    self.dict_negative_preconditions[self.reverse_index[pred+'.'+str(
+                        self.step)]].append(idx1)
+                    new_clause.append([-idx1, -idx2])
+
+        for i in range(len(new_actions)):
+            for j in range(i+1, len(new_actions)):
+                ii = self.reverse_index[action_to_string(
+                    new_actions[i])+'.'+str(self.step)]
+                jj = self.reverse_index[action_to_string(
+                    new_actions[j])+'.'+str(self.step)]
+                new_clause.append([-ii, -jj])
+
+    def solve(self):
         # Initialise clock
         t0 = time.time()
 
-        static_predicates, dynamic_predicates = get_static_and_dynamic_preidcates(
+        static_predicates, dynamic_predicates = get_static_and_dynamic_predicates(
             self.predicates, self.actions)
 
         timeless_truth = get_timeless_truth(self.state, static_predicates)
@@ -134,7 +154,7 @@ class SATPlanner:
         old_dynamic_predicates = []
         for pred in self.state:
             if pred[0] in dynamic_predicates:
-                old_dynamic_predicates.appennd(predicate_to_string(pred))
+                old_dynamic_predicates.append(predicate_to_string(pred))
 
         variables = [None]
         old_clause = []
@@ -169,6 +189,14 @@ class SATPlanner:
 
             self.update_predicates(
                 old_dynamic_predicates, new_predicates, new_variables)
+
+            self.update_actions(new_actions, new_predicates, new_clause)
+
+            print(new_predicates)
+            print(new_variables)
+            print(new_clause)
+            print(self.reverse_index)
+            break
 
         # # Parsed data
         # state = parser.state
@@ -230,13 +258,13 @@ if __name__ == '__main__':
     domain = sys.argv[1]
     problem = sys.argv[2]
     verbose = len(sys.argv) > 3 and sys.argv[3] == '-v'
-    planner = Planner()
-    plan = planner.solve(domain, problem)
-    print('Time: ' + str(time.time() - start_time) + 's')
-    if plan is not None:
-        print('plan:')
-        for act in plan:
-            print(act if verbose else act.name +
-                  ' ' + ' '.join(act.parameters))
-    else:
-        sys.exit('No plan was found')
+    planner = SATPlanner(domain, problem)
+    plan = planner.solve()
+    # print('Time: ' + str(time.time() - start_time) + 's')
+    # if plan is not None:
+    #     print('plan:')
+    #     for act in plan:
+    #         print(act if verbose else act.name +
+    #               ' ' + ' '.join(act.parameters))
+    # else:
+    #     sys.exit('No plan was found')
