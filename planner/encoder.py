@@ -83,3 +83,38 @@ class Encoder:
         initial_state = self.formula.make_and_from_array(initial)
 
         return initial_state
+
+    def encode_goal(self):
+        """
+        Encodes formula for the goal
+        """
+
+        propositional_goal = []
+
+        goal = self.task.goal
+
+        # Check if goal is just a single atom
+        if isinstance(goal, pddl.conditions.Atom):
+            # Check goal is in the variables associated to fluents
+            if goal in self.fluents:
+                propositional_goal.append(self.formula.create_var(
+                    self.boolean_variables[self.horizon][str(goal)]))
+
+        # Check if goal is a conjunction
+        elif isinstance(goal, pddl.conditions.Conjunction):
+            for fact in goal.parts:
+
+                if fact in self.fluents:
+                    goal_idx = self.boolean_variables[self.horizon][str(
+                        fact)]
+                    propositional_goal.append(
+                        self.formula.create_var(goal_idx))
+
+        else:
+            raise Exception(
+                'Goal condition \'{}\' not recognized'.format(goal))
+
+        # Formula encoding the goal
+        goal = self.formula.make_and_from_array(propositional_goal)
+
+        return goal
