@@ -2,6 +2,7 @@
 from translate import instantiate
 import translate.pddl as pddl
 from collections import defaultdict
+from itertools import combinations
 from formula import Formula
 
 
@@ -302,3 +303,48 @@ class Encoder:
             all_fluents.append(self.formula.make_and_from_array(frame))
 
         return self.formula.make_and_from_array(all_fluents)
+
+    def encode_at_most_one_action(self):
+        '''
+        Encodes at most one action axiom
+        '''
+        one_action = []
+
+        for step in range(self.horizon):
+
+            negated_couple = []
+
+            v = self.action_variables[step]
+            for action1, action2 in combinations(v.values(), 2):
+
+                action_couple = self.formula.create_var_array(
+                    [action1, action2])
+                conjunction_couple = self.formula.make_and_from_array(
+                    action_couple)
+                negated_couple.append(
+                    self.formula.make_not(conjunction_couple))
+
+            one_action.append(self.formula.make_and_from_array(negated_couple))
+
+        return self.formula.make_and_from_array(one_action)
+
+    def encode_at_least_one_action(self):
+        '''
+        Encodes at least one action per step axiom
+        '''
+
+        at_least_one_for_step = []
+        at_least_one = []
+
+        for step in range(self.horizon):
+
+            for action in self.actions:
+                action_idx = self.action_variables[step][str(action.name)]
+                at_least_one_for_step.append(
+                    self.formula.create_var(action_idx))
+
+            # at least one action should be performed at each step
+            at_least_one.append(
+                self.formula.make_or_from_array(at_least_one_for_step))
+
+        return self.formula.make_and_from_array(at_least_one)

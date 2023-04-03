@@ -77,6 +77,18 @@ class Formula:
             self.name_to_id[name] = node_id
         return node
 
+    def create_var_array(self, litterals):
+        assert (len(litterals) > 0)
+
+        output_list = []
+        for litt in litterals:
+
+            if litt < 0:
+                output_list.append(self.make_not(self.create_var(-litt)))
+            else:
+                output_list.append(self.create_var(litt))
+        return output_list
+
     def make_operator(self, temp):
         node_id = self.node_to_id.get(temp)
         if node_id is not None:
