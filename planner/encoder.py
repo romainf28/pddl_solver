@@ -118,3 +118,69 @@ class Encoder:
         goal = self.formula.make_and_from_array(propositional_goal)
 
         return goal
+
+    def encode_actions(self):
+        """
+        Encodes action constraints
+        """
+
+        actions = []
+        action_implication = []
+
+        for step in range(self.horizon):
+
+            for action in self.actions:
+
+                action_name = self.formula.create_var(
+                    self.action_variables[step][action.name])
+
+                # Encode preconditions
+                preconditions = []
+                for precond in action.condition:
+                    if precond in self.fluents:
+                        preconditions.append(self.formula.create_var(
+                            self.boolean_variables[step][str(precond)]))
+
+                # conjunction of all preconditions
+                all_preconditions = self.formula.make_and_from_array(
+                    preconditions)
+                # Action implies the conjunction of all preconditions
+                imply_prec = self.formula.make_implication(
+                    action_name, all_preconditions)
+
+                # Encode add effects
+                add_effects = []
+                for add in action.add_effects:
+                    add = add[1]
+                    if add in self.fluents:
+                        add_effects.append(self.formula.create_var(
+                            self.boolean_variables[step+1][str(add)]))
+
+                # conjunction of all add effects
+                all_add_effects = self.formula.make_and_from_array(add_effects)
+                # Action implies the conjunction of all add effects
+                imply_add_effects = self.formula.make_implication(
+                    action_name, all_add_effects)
+
+                # Encode delete effects
+                del_effects = []
+                for de in action.del_effects:
+                    de = de[1]
+                    if de in self.fluents:
+                        del_effects.append(self.formula.make_not(
+                            self.formula.create_var(self.boolean_variables[step+1][str(de)])))
+
+                # conjunction of all deleted effects
+                all_del_effects = self.formula.make_and_from_array(del_effects)
+                # Action implies the conjunction of all deleted effects
+                imply_del_effects = self.formula.make_implication(
+                    action_name, all_del_effects)
+
+                # conjunction of all implications
+                action_implication.append(self.formula.make_and_from_array(
+                    [imply_prec, imply_add_effects, imply_del_effects]))
+
+            actions.append(
+                self.formula.make_and_from_array(action_implication))
+
+        return self.formula.make_and_from_array(actions)

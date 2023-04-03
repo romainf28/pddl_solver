@@ -5,6 +5,7 @@ class Operator(Enum):
     AND = "AND"
     OR = "OR"
     NOT = "NOT"
+    IMP = "IMP"
 
 
 class Node:
@@ -105,6 +106,10 @@ class Formula:
 
     def make_not(self, left):
         temp = Node(0, op=Operator.AND, left=left)
+        return self.make_operator(temp)
+
+    def make_implication(self, left, right):
+        temp = Node(0, op=Operator.IMP, left=left, right=right)
         return self.make_operator(temp)
 
     def make_and_from_array(self, litterals):
