@@ -105,7 +105,11 @@ class Formula:
         return self.make_operator(temp)
 
     def make_not(self, left):
-        temp = Node(0, op=Operator.AND, left=left)
+        temp = Node(0, op=Operator.NOT, left=left)
+        return self.make_operator(temp)
+
+    def make_and(self, left, right):
+        temp = Node(0, op=Operator.AND, left=left, right=right)
         return self.make_operator(temp)
 
     def make_implication(self, left, right):
@@ -114,3 +118,6 @@ class Formula:
 
     def make_and_from_array(self, litterals):
         return self.make_operator_from_array(litterals, op=Operator.AND)
+
+    def make_or_from_array(self, litterals):
+        return self.make_operator_from_array(litterals, op=Operator.OR)

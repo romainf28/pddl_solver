@@ -184,3 +184,121 @@ class Encoder:
                 self.formula.make_and_from_array(action_implication))
 
         return self.formula.make_and_from_array(actions)
+
+    def encode_frame_axioms(self):
+        """
+        Encode frame axioms
+        """
+
+        all_fluents = []
+
+        actions_deleting = defaultdict(list)
+        actions_adding = defaultdict(list)
+
+        # Check if fluent is dynamic
+        for fluent in self.fluents:
+
+            for action in self.actions:
+
+                # Check if fluent is added by an action
+                for add in action.add_effects:
+                    if fluent == add[1]:
+
+                        # Save action and change the value of the fluent from negative to positive
+                        actions_adding[fluent].append(action.name)
+                        break
+
+                # Check if fluent is a precondition
+                if fluent in action.condition:
+
+                    # Check if fluent is deleted by the action
+                    for de in action.del_effects:
+                        if fluent == de[1]:
+
+                            # Save action and change value of the fluent from positive to negative
+                            actions_deleting[fluent].append(action.name)
+                            break
+
+        for step in range(self.horizon):
+            frame = []
+
+            for fluent in self.fluents:
+
+                pos_actions_done = list()
+                neg_actions_done = list()
+
+                swap_pos_to_neg = False
+                swap_neg_to_pos = False
+
+                if fluent in actions_adding:
+                    swap_neg_to_pos = True
+                if fluent in actions_deleting:
+                    swap_pos_to_neg = True
+
+                # Same fluent at two consecutive steps
+                f_step = self.formula.create_var(
+                    self.boolean_variables[step][str(fluent)])
+                f_step_plus1 = self.formula.create_var(
+                    self.boolean_variables[step + 1][str(fluent)])
+
+                if not (swap_neg_to_pos):
+                    # If fluent is false at step i and is also false at step i+1
+
+                    not_f_step = self.formula.make_not(f_step)
+                    not_f_step_plus1 = self.formula.make_not(f_step_plus1)
+
+                    frame.append(self.formula.make_implication(
+                        not_f_step, not_f_step_plus1))
+
+                else:
+                    # The fluent can be added by at least one action
+
+                    not_f_step = self.formula.make_not(f_step)
+
+                    consecutive_fluents = self.formula.make_and(
+                        not_f_step, f_step_plus1)
+
+                    # disjunction of all actions that change the fluent's value
+                    for act in actions_adding[fluent]:
+                        pos_actions_done.append(
+                            self.formula.create_var(self.action_variables[step][act]))
+
+                    if len(pos_actions_done) > 1:
+                        at_least_one_action = self.formula.make_or_from_array(
+                            pos_actions_done)
+                    else:
+                        at_least_one_action = pos_actions_done[0]
+
+                    frame.append(self.formula.make_implication(
+                        consecutive_fluents, at_least_one_action))
+
+                if not (swap_pos_to_neg):
+                    # If fluent is true at step i and is also true at step i+1
+                    frame.append(self.formula.make_implication(
+                        f_step, f_step_plus1))
+
+                else:
+                    # The fluent can be deleted by at least one action
+
+                    not_f_stepplus1 = self.formula.make_not(f_step_plus1)
+
+                    consecutive_fluents = self.formula.make_and(
+                        f_step, not_f_stepplus1)
+
+                    # disjunction of all actions that change the fluent's value
+                    for act in actions_deleting[fluent]:
+                        neg_actions_done.append(
+                            self.formula.create_var(self.action_variables[step][act]))
+
+                    if len(neg_actions_done) > 1:
+                        at_least_one_action = self.formula.make_or_from_array(
+                            neg_actions_done)
+                    else:
+                        at_least_one_action = neg_actions_done[0]
+
+                    frame.append(self.formula.make_implication(
+                        consecutive_fluents, at_least_one_action))
+
+            all_fluents.append(self.formula.make_and_from_array(frame))
+
+        return self.formula.make_and_from_array(all_fluents)
