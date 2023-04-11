@@ -1,13 +1,13 @@
 
+from grounder import Grounder
+import pddlparser
 
-if __name__ == '__main__':
+domain_file = 'instances/groupe1/domain.pddl'
+problem_file = 'instances/groupe1/problem0.pddl'
 
-    from translate.pddl_parser.pddl_file import open
-    from planner.encoder import Encoder
+domain = pddlparser.PDDLParser.parse(domain_file)
+problem = pddlparser.PDDLParser.parse(problem_file)
 
-    task = open(
-        'instances/groupe3/domain.pddl', 'instances/groupe3/problem1.pddl')
 
-    enc = Encoder(task, horizon=10)
-    enc.create_variables()
-    print(enc.encode_initial_state().display())
+grounder = Grounder(domain, problem)
+print(grounder._get_static_predicates())
