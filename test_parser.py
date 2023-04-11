@@ -10,4 +10,4 @@ problem = pddlparser.PDDLParser.parse(problem_file)
 
 
 grounder = Grounder(domain, problem)
-grounder.ground()
+print(grounder.ground())

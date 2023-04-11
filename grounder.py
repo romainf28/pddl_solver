@@ -35,7 +35,16 @@ class Grounder:
         # Ground goal
         goals = self._get_partial_state(self.problem.goals)
 
-        print(operators, goals)
+        # get facts from operators and include the ones from the goal
+        facts = self._get_facts_from_operators(operators) | goals
+
+        # Remove static predicates from initial state
+        initial_state &= facts
+
+        # remove irrelevant operators
+        operators = self._remove_irrelevant_operators(operators, goals)
+
+        return PlanningTask(self.domain.name, facts, initial_state, goals, operators)
 
     def _get_static_predicates(self):
         """
@@ -218,3 +227,56 @@ class Grounder:
                    for action in self.actions]
         grounded_operators = list(itertools.chain(*op_list))
         return grounded_operators
+
+    def _get_facts_from_operators(self, operators):
+        """
+        Get all the facts from grounded operators (precondition, add
+        effects and delete effects).
+        """
+        facts = set()
+        for op in operators:
+            facts |= op.preconditions | op.add_effects | op.del_effects
+
+        return facts
+
+    def _remove_irrelevant_operators(self, operators, goals):
+        """
+        From the facts within the goal state we iteratively compute
+        a fixpoint of all relevant effects.
+        Relevant effects are those which contribute to a valid path to the goal.
+        """
+
+        relevant_facts = set()
+        old_relevant_facts = set()
+        changed = True
+        for goal in goals:
+            relevant_facts.add(goal)
+
+        while changed:
+            # set next relevant facts to current facts
+            # if nothing is added in the for loop a
+            # fixpoint has been found
+            old_relevant_facts = relevant_facts.copy()
+
+            for op in operators:
+                new_add_list = op.add_effects & relevant_facts
+                new_del_list = op.del_effects & relevant_facts
+                if new_add_list or new_del_list:
+                    # add all preconditions to the relevant facts
+                    relevant_facts |= op.preconditions
+            changed = old_relevant_facts != relevant_facts
+
+        # delete all effects which are not relevant
+        del_operators = set()
+        for op in operators:
+
+            new_add_list = op.add_effects & relevant_facts
+            new_del_list = op.del_effects & relevant_facts
+
+            op.add_effects = new_add_list
+            op.del_effects = new_del_list
+            if not new_add_list and not new_del_list:
+                del_operators.add(op)
+
+        # remove completely irrelevant operators
+        return [op for op in operators if not op in del_operators]
