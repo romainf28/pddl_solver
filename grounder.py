@@ -65,3 +65,26 @@ class Grounder:
     def _get_partial_state(self, atoms):
         """Return a set of the string representation of the grounded atoms."""
         return frozenset(self._get_fact(atom) for atom in atoms)
+
+    def _find_pred_in_initial_state(self, pred_name, param, pos, initial_state):
+        """
+        Check if there is an instantiation of the predicate pred_name
+        with the parameter param at position pos in the initial condition
+        """
+        match_in_initial_state = None
+        if pos == 0:
+            match_in_initial_state = re.compile(rf"\({pred_name} {param}.*")
+        else:
+            reg_ex = r"\(%s\s+" % pred_name
+            reg_ex += r"[\w\d-]+\s+" * pos
+            reg_ex += "{}.*".format(param)
+            match_in_initial_state = re.compile(reg_ex)
+        assert match_in_initial_state is not None
+        return any([match_in_initial_state.match(string) for string in initial_state])
+
+    def _get_action_signature(self, action):
+        """
+        Get the signature of an action, i.e. a list of pairs (param, param_type) 
+        for each parameter of the action
+        """
+        return list(zip(action.arg_names, action.types))
