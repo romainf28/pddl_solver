@@ -3,7 +3,7 @@ import sys
 import subprocess
 
 
-class CnfWriter:
+class CnfHandler:
     def __init__(self, input_file='input.cnf', output_file='output.txt'):
         self.input_file = input_file
         self.output_file = output_file
@@ -92,34 +92,72 @@ class CnfWriter:
         not_right = 'not-' + right if type(right) is str else -right
         return aux_var, [[-aux_var, left], [-aux_var, right], [not_left, not_right, aux_var]]
 
+    def decode_output(self, names_to_indices):
+        """
+        Transform the outputs of minisat back into
+        the text-variable-names required by our planer.
+        """
 
-def solve_minisat(input_file, output_file):
-    """
-    Calls minisat with the specified formula, the number of variables
-    and the number of clauses.
-    Returns the output filename of the minisat computation.
-    """
-    try:
-        process = subprocess.Popen(['minisat', input_file, output_file],
-                                   stderr=subprocess.PIPE,
-                                   stdout=subprocess.PIPE)
-        process.wait()
-    except OSError:
-        print('minisat could not be found. '
-              )
+        indices_to_names = dict()
+        for name, idx in names_to_indices.items():
+            indices_to_names[idx] = name
 
-        sys.exit(1)
-    try:
-        os.remove(input_file)
-    except OSError:
-        pass
+        decoded = []
+        with open(self.output_file, 'r') as file:
+            lines = file.readlines()
+        if lines[0].startswith('SAT'):
+            vars = lines[1].split()
+            # the last element of a line is always a 0
+            for var in vars[:-1]:
+                negation = ''
+                if var.startswith('-'):
+                    negation = 'not-'
+                    var = var[1:]
+                var = indices_to_names.get(int(var))
+
+                if var:
+                    decoded.append(negation + var)
+        try:
+            os.remove(self.output_file)
+        except OSError:
+            pass
+        return decoded
 
 
-def solve(formula, input_file, output_file):
-    """
-    Transforms the formula into the format required by minisatand feed the transformed
-    formula to minisat
-    """
+class MinisatSolver:
+    def __init__(self, input_file, output_file):
+        self.input_file = input_file
+        self.output_file = output_file
 
-    vars_to_indices = CnfWriter(input_file, output_file).write(formula)
-    solve_minisat(input_file, output_file)
+    def _solve_minisat(self):
+        """
+        Calls minisat with the specified formula, the number of variables
+        and the number of clauses.
+        Returns the output filename of the minisat computation.
+        """
+        try:
+            process = subprocess.Popen(['minisat', self.input_file, self.output_file],
+                                       stderr=subprocess.PIPE,
+                                       stdout=subprocess.PIPE)
+            process.wait()
+        except OSError:
+            print('minisat could not be found. '
+                  )
+
+            sys.exit(1)
+        try:
+            os.remove(self.input_file)
+        except OSError:
+            pass
+
+    def solve(self, formula):
+        """
+        Transforms the formula into the format required by minisatand feed the transformed
+        formula to minisat
+        """
+
+        cnf_handler = CnfHandler(self.input_file, self.output_file)
+        vars_to_indices = cnf_handler.write(formula)
+        self._solve_minisat(self.input_file, self.output_file)
+        valuation = cnf_handler.decode_output(vars_to_indices)
+        return valuation
