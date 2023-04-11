@@ -10,4 +10,4 @@ problem = pddlparser.PDDLParser.parse(problem_file)
 
 
 grounder = Grounder(domain, problem)
-print(grounder._get_static_predicates())
+grounder.ground()

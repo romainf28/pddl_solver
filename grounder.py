@@ -28,6 +28,15 @@ class Grounder:
         initial_state = self._get_partial_state(
             self.problem.initial_state.predicates)
 
+        # Ground actions
+        operators = self._ground_actions(
+            static_predicates, initial_state)
+
+        # Ground goal
+        goals = self._get_partial_state(self.problem.goals)
+
+        print(operators, goals)
+
     def _get_static_predicates(self):
         """
         Returns the list of static predicates, i.e. predicates which
@@ -88,3 +97,124 @@ class Grounder:
         for each parameter of the action
         """
         return list(zip(action.arg_names, action.types))
+
+    def _ground_atom(self, atom, assignment, action_signature):
+        """
+        Return the grounded representation of an atom with respect
+        to an assignment.
+        """
+        names = []
+        for name, _ in action_signature:
+
+            if name in assignment and name in atom:
+                names.append(assignment[name])
+
+        return self._get_grounded_string(atom[0], names)
+
+    def _create_operator(self, action, assignment, static_predicates, initial_state):
+        """Create a new operator for an action with a given assignment.
+        True static predicates are not added to the
+        precondition facts. If there is a false static predicate
+        in the ungrounded precondition, the operator won't be created.
+        """
+        precondition_facts = set()
+        action_signature = self._get_action_signature(action)
+        for precondition in action.preconditions.literals:
+            # handle negative preconditions
+            if precondition[0] == -1:
+                precondition = precondition[1]
+            fact = self._ground_atom(precondition, assignment, action_signature
+                                     )
+            predicate_name = precondition[0]
+
+            if predicate_name in static_predicates:
+                # Check if this precondition is false in the initial state
+                if fact not in initial_state:
+                    # the precondition will never be true, hence we don't add the operator
+                    return None
+            else:
+                # the precondition is not always true -> we add the operator
+                precondition_facts.add(fact)
+
+        add_effects = set()
+        del_effects = set()
+
+        for effect in action.effects.literals:
+            # del effects
+            if effect[0] == -1:
+                fact = self._ground_atom(
+                    effect[1], assignment, action_signature)
+                del_effects.add(fact)
+            else:
+                # add effects
+                fact = self._ground_atom(effect, assignment, action_signature)
+                add_effects.add(fact)
+
+        # If the same fact is added and deleted by an operator, the STRIPS formalism
+        # adds it.
+        del_effects -= add_effects
+        add_effects -= precondition_facts
+        args = [assignment[arg_name] for arg_name in action.arg_names]
+        name = self._get_grounded_string(action.name, args)
+        return Operator(name, precondition_facts, add_effects, del_effects)
+
+    def _ground_action(self, action, static_predicates, initial_state):
+        """
+        Ground the action and return a list of operators.
+        """
+        param2objects = {}
+
+        for idx, param_type in enumerate(action.types):
+            # set of possible objects for this parameter
+            objects = set(self.type2objects[param_type])
+            param2objects[action.arg_names[idx]] = objects
+
+        # For each parameter that is not constant,
+        # remove all invalid static precondition
+        for param, objects in param2objects.items():
+            for pred in action.preconditions.literals:
+                # handle negative preconditions
+                if pred[0] == -1:
+                    pred = pred[1]
+
+                # if a static predicate is present in the precondition
+                if pred[0] in static_predicates:
+                    pos = -1
+                    count = 0
+                    # check if there is an instantiation with the current parameter
+                    for sig_var, _ in self._get_action_signature(action):
+                        if sig_var == param:
+                            pos = count
+                        count += 1
+                    if pos != -1:
+                        # remove object if there is no instantiation in the initial state
+                        obj_copy = objects.copy()
+                        for o in obj_copy:
+                            if not self._find_pred_in_initial_state(pred[0], o, pos, initial_state):
+                                objects.remove(o)
+
+        # list of possible assignment tuples (param_name, object)
+        possible_assignments = [
+            [(param, obj) for obj in objects] for param, objects in param2objects.items()
+        ]
+        # Calculate all possible assignments
+        assignments = itertools.product(*possible_assignments)
+
+        # Create a new operator for each possible assignment
+        operators = [
+            self._create_operator(action, dict(assign), static_predicates, initial_state) for assign in assignments
+        ]
+
+        # Filter out None values
+        operators = filter(bool, operators)
+
+        return operators
+
+    def _ground_actions(self, static_predicates, initial_state):
+        """
+        Ground all the actions and return a list of operators.
+        """
+        op_list = [self._ground_action(action, static_predicates, initial_state)
+                   for action in self.actions]
+        grounded_operators = list(itertools.chain(*op_list))
+        return grounded_operators
