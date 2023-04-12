@@ -14,7 +14,7 @@ problem = pddlparser.PDDLParser.parse(problem_file)
 grounder = Grounder(domain, problem)
 task = grounder.ground()
 
-plan_extractor = PlanExtractor(task, 2)
+plan_extractor = PlanExtractor(task, 8)
 formula = plan_extractor.encode_plan_formula()
 
 solver = MinisatSolver()

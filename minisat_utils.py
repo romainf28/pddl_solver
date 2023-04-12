@@ -161,6 +161,6 @@ class MinisatSolver:
 
         cnf_handler = CnfHandler(self.input_file, self.output_file)
         vars_to_indices = cnf_handler.write(formula)
-        # self._solve_minisat()
-        # valuation = cnf_handler.decode_output(vars_to_indices)
-        # return valuation
+        self._solve_minisat()
+        valuation = cnf_handler.decode_output(vars_to_indices)
+        return valuation
