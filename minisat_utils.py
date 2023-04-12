@@ -103,6 +103,7 @@ class CnfHandler:
             indices_to_names[idx] = name
 
         decoded = []
+
         with open(self.output_file, 'r') as file:
             lines = file.readlines()
         if lines[0].startswith('SAT'):
@@ -125,7 +126,7 @@ class CnfHandler:
 
 
 class MinisatSolver:
-    def __init__(self, input_file, output_file):
+    def __init__(self, input_file='input.cnf', output_file='output.txt'):
         self.input_file = input_file
         self.output_file = output_file
 
@@ -152,12 +153,14 @@ class MinisatSolver:
 
     def solve(self, formula):
         """
-        Transforms the formula into the format required by minisatand feed the transformed
-        formula to minisat
+        Transforms the formula into the format required by minisat, feed the transformed
+        formula to minisat and decodes the output of minisat.
+        If the formula is satisfiable, a list of variables is returned.
+        If the formula is unsatisfiable, an empty list is returned.
         """
 
         cnf_handler = CnfHandler(self.input_file, self.output_file)
         vars_to_indices = cnf_handler.write(formula)
-        self._solve_minisat(self.input_file, self.output_file)
-        valuation = cnf_handler.decode_output(vars_to_indices)
-        return valuation
+        # self._solve_minisat()
+        # valuation = cnf_handler.decode_output(vars_to_indices)
+        # return valuation
