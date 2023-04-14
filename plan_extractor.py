@@ -1,4 +1,5 @@
 from planning_task import PlanningTask
+from collections import defaultdict
 
 
 class PlanExtractor:
@@ -69,3 +70,41 @@ class PlanExtractor:
         for fact in self.task.facts:
             formula += self._get_formula_for_fact(operator, fact, step)
         return formula
+
+    def extract_plan(self, operators, valuation):
+        '''
+        Transforms a valuation i.e. a list of facts into a list of operators
+        '''
+        positive_facts = defaultdict(set)
+        negative_facts = defaultdict(set)
+        plan_length = -1
+
+        for fact in valuation:
+            if ('<->' in fact) or ('AND' in fact):
+                continue
+
+            parts = fact.split('-')
+            depth = int(parts[-1])
+            plan_length = max(plan_length, depth)
+
+            if fact.startswith("not-"):
+                variable_name = "-".join(parts[:-1])
+                negative_facts[depth].add(variable_name)
+            else:
+                variable_name = "-".join(parts[:-1])
+                positive_facts[depth].add(variable_name)
+
+        plan = []
+        for step in range(plan_length):
+            current_state = positive_facts[step]
+            next_state = positive_facts[step+1]
+            print(current_state, next_state)
+            chosen_operator = None
+            for op in operators:
+                if op.applicable(current_state):
+                    print(op.apply(current_state), next_state)
+                if op.applicable(current_state) and op.apply(current_state) == next_state:
+                    chosen_operator = op
+                    break
+            plan.append(chosen_operator)
+        return plan
