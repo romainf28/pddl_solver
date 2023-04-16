@@ -18,6 +18,7 @@
 
 import re
 from action import Action
+from lama_types import State
 
 
 class PDDL_Parser:
@@ -219,7 +220,7 @@ class PDDL_Parser:
         tokens = self.scan_tokens(problem_filename)
         if type(tokens) is list and tokens.pop(0) == 'define':
             self.problem_name = 'unknown'
-            self.state = frozenset()
+            self.state: State = frozenset()
             self.positive_goals = frozenset()
             self.negative_goals = frozenset()
             while tokens:
