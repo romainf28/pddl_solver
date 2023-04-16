@@ -6,9 +6,10 @@ class Operator:
     delete_effects are the facts made false by the operator.
     """
 
-    def __init__(self, name, preconditions, add_effects, del_effects):
+    def __init__(self, name, pos_preconditions, neg_preconditions, add_effects, del_effects):
         self.name = name
-        self.preconditions = frozenset(preconditions)
+        self.pos_preconditions = frozenset(pos_preconditions)
+        self.neg_preconditions = frozenset(neg_preconditions)
         self.add_effects = frozenset(add_effects)
         self.del_effects = frozenset(del_effects)
 
@@ -17,7 +18,7 @@ class Operator:
         Operators are applicable when their preconditions form a subset
         of the facts in a given state.
         """
-        return self.preconditions.issubset(state)
+        return self.pos_preconditions.issubset(state) and self.neg_preconditions.isdisjoint(state)
 
     def apply(self, state):
         """
@@ -29,18 +30,20 @@ class Operator:
     def __eq__(self, other):
         return (
             self.name == other.name
-            and self.preconditions == other.preconditions
+            and self.pos_preconditions == other.pos_preconditions
+            and self.neg_preconditions == other.neg_preconditions
             and self.add_effects == other.add_effects
             and self.del_effects == other.del_effects
         )
 
     def __hash__(self):
-        return hash((self.name, self.preconditions, self.add_effects, self.del_effects))
+        return hash((self.name, self.pos_preconditions, self.neg_preconditions, self.add_effects, self.del_effects))
 
     def __str__(self):
         str_repr = "%s\n" % self.name
         for gp, facts in [
-            ("PRE", self.preconditions),
+            ("POS PRE", self.pos_preconditions),
+            ("NEG PRE", self.neg_preconditions),
             ("ADD", self.add_effects),
             ("DEL", self.del_effects),
         ]:

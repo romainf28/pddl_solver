@@ -1,24 +1,46 @@
-
-from grounder import Grounder
-import pddlparser
-from plan_extractor import PlanExtractor
-from minisat_utils import MinisatSolver
+from sat_planner import SATPlanner
+import itertools
 
 domain_file = 'instances/groupe1/domain.pddl'
-problem_file = 'instances/groupe1/problem0.pddl'
+problem_file = 'instances/groupe1/problem1.pddl'
 
-domain = pddlparser.PDDLParser.parse(domain_file)
-problem = pddlparser.PDDLParser.parse(problem_file)
 
-grounder = Grounder(domain, problem)
-task = grounder.ground()
+def rubik_custom_assigner(possible_assignments):
 
-plan_extractor = PlanExtractor(task, 5)
-formula = plan_extractor.encode_plan_formula()
+    combs = itertools.product(*possible_assignments[0:0+3])
 
-solver = MinisatSolver()
-valuation = solver.solve(formula)
+    unique_combs = set()
+    for comb in combs:
+        if len(set([color[1] for color in comb])) == 3:
+            unique_combs.add(comb)
+    print(len(unique_combs))
 
-plan = plan_extractor.extract_plan(task.operators, valuation)
+    assignments = itertools.chain((itertools.combinations(
+        possible_assignments[i:i+3], 3) for i in range(0, len(possible_assignments), 3)))
+    return assignments
+
+
+planner = SATPlanner(domain_file, problem_file)
+plan = planner.find_plan(min_horizon=15, max_horizon=20)
 
 print(plan)
+
+'''
+Results
+
+groupe 1 :
+
+- problem 0 : plan with 6 actions
+- problem 1 :
+
+groupe 2:
+- problem 0 : plan with 7 actions
+- problem 1 : plan with 9 actions
+- problem 2 : plan with 20 actions
+
+groupe 3:
+
+
+groupe 4:
+- prob-2-3 : 
+'''

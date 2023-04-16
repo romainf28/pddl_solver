@@ -8,13 +8,17 @@ from planning_task import Operator, PlanningTask
 class Grounder:
     """
     A class to ground a PDDL domain and problem into a Planning Task
+    custom_assigner is an optional parameter. it is a function which takes
+    as input a list of couples (param_name, type) for each parameter of an action
+    and returns a itertools iterable of assignments to consider
     """
 
-    def __init__(self, domain, problem):
+    def __init__(self, domain, problem, custom_assigner=None):
         self.domain = domain
         self.problem = problem
         self.actions = domain.actions
         self.predicates = domain.predicates
+        self.custom_assigner = custom_assigner
 
         # Dictionnary type -> objects
         self.type2objects = problem.initial_state.objects
@@ -54,6 +58,14 @@ class Grounder:
 
         def get_effects(action):
             effects = set()
+            # handle universally quantified effects
+            for when_effects in action.effects.when:
+                for when_effect in when_effects[2:]:
+                    for effect in when_effect:
+                        if effect[0] == -1:
+                            effect = effect[1]
+                        effects.add(effect[0])
+
             for effect in action.effects.literals:
                 # handle del effects
                 if effect[0] == -1:
@@ -74,6 +86,8 @@ class Grounder:
     def _get_grounded_string(self, name, args):
         """Return a more convenient string representation for a predicate"""
         args_string = " " + " ".join(args) if args else ""
+        if len(args) == 1 and args[0] == '':
+            args_string = ''
         return "({}{})".format(name, args_string)
 
     def _get_fact(self, atom):
@@ -102,18 +116,40 @@ class Grounder:
 
     def _get_action_signature(self, action):
         """
-        Get the signature of an action, i.e. a list of pairs (param, param_type) 
+        Get the signature of an action, i.e. a list of pairs (param, param_type)
         for each parameter of the action
         """
-        return list(zip(action.arg_names, action.types))
+        return dict(zip(action.arg_names, action.types))
 
-    def _ground_atom(self, atom, assignment, action_signature):
+    def _get_action_pred_signature(self, pred, action_sig):
+        """
+        Get the signature of a predicate in an action, i.e. a list of pairs (param, param_type) for
+        each parameter of the predicate
+        """
+        if pred[1] == '':
+            return []
+        return [(param, action_sig[param]) for param in pred[1:]]
+
+    def _get_arg_names_and_types_forall(self, action):
+        '''
+        get arguments names and types for an action without parameters but with universal effects
+        '''
+        # (forall (var_lst) (when (cnd) (effects)))
+        parameters = []
+        types = []
+        for effect in action.effects.forall:
+            for eff in effect[0]:
+                parameters.append(eff[1])
+                types.append(eff[0])
+        return parameters, types
+
+    def _ground_atom(self, atom, assignment, action_sig):
         """
         Return the grounded representation of an atom with respect
         to an assignment.
         """
         names = []
-        for name, _ in action_signature:
+        for name, _ in self._get_action_pred_signature(atom, action_sig):
 
             if name in assignment and name in atom:
                 names.append(assignment[name])
@@ -126,11 +162,14 @@ class Grounder:
         precondition facts. If there is a false static predicate
         in the ungrounded precondition, the operator won't be created.
         """
-        precondition_facts = set()
+        pos_precondition_facts = set()
+        neg_precondition_facts = set()
         action_signature = self._get_action_signature(action)
+
         for precondition in action.preconditions.literals:
             # handle negative preconditions
-            if precondition[0] == -1:
+            is_negative_precondition = (precondition[0] == -1)
+            if is_negative_precondition:
                 precondition = precondition[1]
             fact = self._ground_atom(precondition, assignment, action_signature
                                      )
@@ -138,12 +177,15 @@ class Grounder:
 
             if predicate_name in static_predicates:
                 # Check if this precondition is false in the initial state
-                if fact not in initial_state:
+                if (fact not in initial_state and not (is_negative_precondition)) or (fact in initial_state and is_negative_precondition):
                     # the precondition will never be true, hence we don't add the operator
                     return None
             else:
                 # the precondition is not always true -> we add the operator
-                precondition_facts.add(fact)
+                if is_negative_precondition:
+                    neg_precondition_facts.add(fact)
+                else:
+                    pos_precondition_facts.add(fact)
 
         add_effects = set()
         del_effects = set()
@@ -162,16 +204,25 @@ class Grounder:
         # If the same fact is added and deleted by an operator, the STRIPS formalism
         # adds it.
         del_effects -= add_effects
-        add_effects -= precondition_facts
+        del_effects -= neg_precondition_facts
+        add_effects -= pos_precondition_facts
         args = [assignment[arg_name] for arg_name in action.arg_names]
+
         name = self._get_grounded_string(action.name, args)
-        return Operator(name, precondition_facts, add_effects, del_effects)
+        return Operator(name, pos_precondition_facts, neg_precondition_facts, add_effects, del_effects)
 
     def _ground_action(self, action, static_predicates, initial_state):
         """
         Ground the action and return a list of operators.
         """
         param2objects = {}
+
+        action_sig = self._get_action_signature(action)
+
+        # action with universal effect
+        if action.effects.forall:
+            action.arg_names, action.types = self._get_arg_names_and_types_forall(
+                action)
 
         for idx, param_type in enumerate(action.types):
             # set of possible objects for this parameter
@@ -180,18 +231,22 @@ class Grounder:
 
         # For each parameter that is not constant,
         # remove all invalid static precondition
+
         for param, objects in param2objects.items():
             for pred in action.preconditions.literals:
+
                 # handle negative preconditions
-                if pred[0] == -1:
+                is_negative = (pred[0] == -1)
+                if is_negative:
                     pred = pred[1]
 
                 # if a static predicate is present in the precondition
                 if pred[0] in static_predicates:
+
                     pos = -1
                     count = 0
                     # check if there is an instantiation with the current parameter
-                    for sig_var, _ in self._get_action_signature(action):
+                    for sig_var, _ in self._get_action_pred_signature(pred, action_sig):
                         if sig_var == param:
                             pos = count
                         count += 1
@@ -199,15 +254,22 @@ class Grounder:
                         # remove object if there is no instantiation in the initial state
                         obj_copy = objects.copy()
                         for o in obj_copy:
-                            if not self._find_pred_in_initial_state(pred[0], o, pos, initial_state):
+                            is_pred_in_initial_state = self._find_pred_in_initial_state(
+                                pred[0], o, pos, initial_state)
+
+                            if (not (is_negative) and not (is_pred_in_initial_state)) or (is_negative and is_pred_in_initial_state):
                                 objects.remove(o)
 
         # list of possible assignment tuples (param_name, object)
         possible_assignments = [
             [(param, obj) for obj in objects] for param, objects in param2objects.items()
         ]
+
         # Calculate all possible assignments
-        assignments = itertools.product(*possible_assignments)
+        if self.custom_assigner is not None:
+            assignments = self.custom_assigner(possible_assignments)
+        else:
+            assignments = itertools.product(*possible_assignments)
 
         # Create a new operator for each possible assignment
         operators = [
@@ -235,7 +297,7 @@ class Grounder:
         """
         facts = set()
         for op in operators:
-            facts |= op.preconditions | op.add_effects | op.del_effects
+            facts |= op.pos_preconditions | op.neg_preconditions | op.add_effects | op.del_effects
 
         return facts
 
@@ -263,11 +325,11 @@ class Grounder:
                 new_del_list = op.del_effects & relevant_facts
                 if new_add_list or new_del_list:
                     # add all preconditions to the relevant facts
-                    relevant_facts |= op.preconditions
+                    relevant_facts |= op.pos_preconditions | op.neg_preconditions
             changed = old_relevant_facts != relevant_facts
 
         # delete all effects which are not relevant
-        del_operators = set()
+        operators_to_delete = set()
         for op in operators:
 
             new_add_list = op.add_effects & relevant_facts
@@ -276,7 +338,7 @@ class Grounder:
             op.add_effects = new_add_list
             op.del_effects = new_del_list
             if not new_add_list and not new_del_list:
-                del_operators.add(op)
+                operators_to_delete.add(op)
 
         # remove completely irrelevant operators
-        return [op for op in operators if not op in del_operators]
+        return [op for op in operators if not op in operators_to_delete]
