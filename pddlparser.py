@@ -408,6 +408,8 @@ def p_effect_def(p):
     for effect in effects:
         if 'FORALL_KEY' in effect:
             forall.append(tuple(effect[1:]))
+            if 'WHEN_KEY' in effect:
+                when.append(tuple(effect[2:]))
         elif 'WHEN_KEY' in effect:
             when.append(tuple(effect[1:]))
         elif 'PROBABILITY' in effect:
@@ -514,7 +516,8 @@ def p_conditional_for_eff(p):
                | LPAREN FORALL_KEY LPAREN typed_variables_lst RPAREN LPAREN AND_KEY literals_lst RPAREN RPAREN'''
     if len(p) == 8:
         if 'WHEN_KEY' in p[6]:
-            p[0] = ('FORALL_KEY', tuple(p[4]), tuple(p[6][1]), tuple(p[6][2]))
+            p[0] = ('FORALL_KEY', tuple(p[4]), 'WHEN_KEY',
+                    tuple(p[6][1]), tuple(p[6][2]))
         else:
             p[0] = ('FORALL_KEY', tuple(p[4]), tuple([p[6]]))
     elif len(p) == 11:
@@ -602,20 +605,26 @@ def p_ground_predicate(p):
 
 def p_typed_constants_lst(p):
     '''typed_constants_lst : constants_lst HYPHEN type typed_constants_lst
-                           | constants_lst HYPHEN type'''
+                           | constants_lst HYPHEN type
+                           | constants_lst'''
     if len(p) == 4:
         p[0] = (p[3], p[1])
     elif len(p) == 5:
         p[0] = (p[3], p[1]) + p[4]
+    elif len(p) == 2:
+        p[0] = ('', p[1])
 
 
 def p_typed_variables_lst(p):
     '''typed_variables_lst : variables_lst HYPHEN type typed_variables_lst
-                           | variables_lst HYPHEN type'''
+                           | variables_lst HYPHEN type
+                           | variables_lst'''
     if len(p) == 4:
         p[0] = [tuple([p[3], name]) for name in p[1]]
     elif len(p) == 5:
         p[0] = [tuple([p[3], name]) for name in p[1]] + p[4]
+    elif len(p) == 2:
+        p[0] = [tuple(['', name]) for name in p[1]]
 
 
 def p_constants_lst(p):

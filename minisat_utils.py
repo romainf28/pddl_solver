@@ -17,12 +17,14 @@ class CnfHandler:
         self.cnf_file = open(self.input_file, 'w')
 
         while formula:
+
             disjunction = formula.pop(0)
             if not isinstance(disjunction, list):
                 self._write_clause([disjunction])
                 continue
             new_clause = []
             for conjunction in disjunction:
+
                 if not isinstance(conjunction, list):
                     new_clause.append(conjunction)
                     continue
@@ -76,9 +78,6 @@ class CnfHandler:
             self._write_clause(clause)
 
     def _get_aux_clauses_for_iff(self, iff):
-        """
-        a <-> b is equivalent to (not a or b) and (not b or a)
-        """
         left, right = iff.split('<->')
         return [[iff, left, right],
                 [iff, 'not-'+left, 'not-'+right],
@@ -88,8 +87,21 @@ class CnfHandler:
     def _get_aux_clauses_for_and(self, left, right):
         self.count += 1
         aux_var = self.count
-        not_left = 'not-' + left if type(left) is str else -left
-        not_right = 'not-' + right if type(right) is str else -right
+        if type(left) is str:
+            if left.startswith('not-'):
+                not_left = left[4:]
+            else:
+                not_left = 'not-'+left
+        else:
+            not_left = -left
+
+        if type(right) is str:
+            if right.startswith('not-'):
+                not_right = right[4:]
+            else:
+                not_right = 'not-'+right
+        else:
+            not_right = -right
         return aux_var, [[-aux_var, left], [-aux_var, right], [not_left, not_right, aux_var]]
 
     def decode_output(self, names_to_indices):
