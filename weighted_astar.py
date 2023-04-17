@@ -58,7 +58,6 @@ def weighted_astar_search(
             if task.is_goal_reached(state):
                 print("Goal reached, extracting solution ...")
                 return node.extract_solution()
-            plan = None
 
             for op, next_state in task.get_next_states(state):
 
