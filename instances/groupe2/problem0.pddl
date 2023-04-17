@@ -88,9 +88,7 @@
         (adjacent pos63 pos62)
     )
 
-    (:goal (or
-            (at pos11)
-            (at pos12)
-            (at pos13)
-        ))
+    (:goal
+        (at pos11)
+    )
 )
