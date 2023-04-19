@@ -1,6 +1,7 @@
 # pddl_solver
 
 Implemention of a solver which takes as input a domain and a planification problem, and returns a valid plan if some exists.
+Please execute `pip install -e .` locally to setup the package.
 
 # Minisat Planner
 
@@ -23,4 +24,12 @@ You should now be able to use minisat (if the directory you set as a prefix is i
 
 ### Run the planner on a given instance
 
-from the root, execute `python3 src/sat_solver/main.py --domain_file src/instances/groupe1/domain.pddl --problem_file src/instances/groupe0.pddl`
+from the root folder, execute `python3 src/sat_solver/main.py --domain_file src/instances/groupe1/domain.pddl --problem_file src/instances/groupe1/domain.pddl`
+
+# Weighted A\* search with landmarks uniform cost paritionning heuristic
+
+from the root folder, execute `python3 src/heuristics/main.py --domain_file src/instances/groupe1/domain.pddl --problem_file src/instances/groupe1/problem0.pddl`
+
+# Run the whole benchmark :
+
+from the root folder, execute `python3 run_benchmark.py`
