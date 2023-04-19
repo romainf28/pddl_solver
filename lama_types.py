@@ -1,5 +1,5 @@
 
-from typing import FrozenSet, Set, Tuple
+from typing import FrozenSet, List, Set, Tuple
 
 
 Fact = Tuple[str, str]
@@ -48,3 +48,5 @@ class Landmark:
     
     def is_satisfied_in_state(self, state: State):
         return self.facts.intersection(state) == self.facts and not self.nfacts.intersection(state)
+    
+LandmarkPlan = List[Tuple[Landmark]]

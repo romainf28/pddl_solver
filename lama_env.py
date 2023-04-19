@@ -4,80 +4,29 @@ from collections import deque
 from networkx import DiGraph
 
 import numpy as np
-from PDDL import PDDL_Parser
-from action import Action
+from grounder import Grounder
+from pddlparser import PDDLParser
+from domain import Action
 
 from itertools import combinations, permutations
 import copy
-from lama_types import Fact, Landmark, Ordering, State
-
-State = "frozenset[tuple]"
-
-
-def sublist_in_list(sublist, list):
-    c = 0
-    res = False
-    for i in sublist:
-        if i in list:
-            c += 1
-    if c == len(sublist):
-        res = True
-    return res
-
-
-def sublist_not_in_list(sublist, list):  # none of elements in sublist are in list
-    res = True
-    for i in sublist:
-        if i in list:
-            res = False
-    return res
-
-
-def replace_names_by_values_in_predicate(param_names, params_values, predicate):
-    new_predicate = tuple(
-        [predicate[0]]
-        + [
-            params_values[param_names.index(predicate[i])]
-            for i in range(1, len(predicate))
-        ]
-    )
-    return new_predicate
-
-
-def get_next_state(state, operation, applicable_parameters):
-    successor_states = []
-    param_names = [param[0] for param in operation.parameters]
-    for parameters in applicable_parameters:
-        new_state = copy.deepcopy(state)
-        # effects with the names of the parameters replaced :
-        add_effects = [
-            replace_names_by_values_in_predicate(param_names, parameters, effect)
-            for effect in list(operation.add_effects)
-        ]
-        del_effects = [
-            replace_names_by_values_in_predicate(param_names, parameters, effect)
-            for effect in list(operation.del_effects)
-        ]
-        new_state = new_state.difference(del_effects)
-        new_state = new_state.union(add_effects)
-        successor_states.append(new_state)
-    return successor_states
+from lama_types import Fact, Landmark, LandmarkPlan, Ordering, State
+from planning_task import Operator, PlanningTask
 
 
 class LamaEnv:
     LM = "LM"
     FF = "FF"
 
-    def __init__(self, parser: PDDL_Parser, action_cost: Callable):
-        self.parser = parser
+    def __init__(self, planning_task: PlanningTask, action_cost: Callable):
+        self.planning_task = planning_task
 
-        self.variables = parser.objects["object"]
-        self.initial_state = parser.state
+        self.facts = planning_task.facts
+        self.initial_state = planning_task.initial_state
 
-        self.positive_goals = parser.positive_goals
-        self.negative_goals = parser.negative_goals
+        self.goals = planning_task.goals
 
-        self.operations = parser.actions
+        self.operations = planning_task.operators
         self.action_cost = action_cost
         self.init_variables()
 
@@ -99,72 +48,18 @@ class LamaEnv:
         # Landmarks variables
         self.LG: DiGraph[Fact] = DiGraph()  # Landmark graph
         self.queue: deque[Landmark] = deque()  # Landmarks to be back-chained from
+        self.accepted: dict[
+            Tuple[State, LandmarkPlan], Set[Landmark]
+        ] = {}  # Landmarks accepted in states evaluated so far
 
-    def FastForward(self, state: State) -> "tuple[int, Action]":
+    def FastForward(self, state: State) -> Tuple[int, Action]:
         return 0, self.operations[0]
 
-    def Lama(self, state: State) -> "tuple[int, Action]":
+    def Lama(self, state: State) -> Tuple[int, Action]:
         return 0, self.operations[0]
 
     def create_successors_generators(self):
         return
-
-    def is_applicable(self, state, operation):
-        nb_parameters = len(operation.parameters)
-        applicable_parameters = []
-        param_names = [param[0] for param in operation.parameters]
-        for list_parameters in list(combinations(self.variables, nb_parameters)):
-            for parameters in list(permutations(list_parameters)):
-                # preconditions with the names of the parameters replaced !
-                positive_preconditions = [
-                    replace_names_by_values_in_predicate(
-                        param_names, parameters, precond
-                    )
-                    for precond in list(operation.positive_preconditions)
-                ]
-                negative_preconditions = [
-                    replace_names_by_values_in_predicate(
-                        param_names, parameters, precond
-                    )
-                    for precond in list(operation.negative_preconditions)
-                ]
-                if sublist_in_list(
-                    positive_preconditions, state
-                ) and sublist_not_in_list(negative_preconditions, state):
-                    applicable_parameters.append(parameters)
-
-        return len(applicable_parameters) > 0, applicable_parameters
-
-    def get_successors(self, state: State, method: str = "naive") -> "list[State]":
-        if method == "naive":
-            applicable_operations = []
-            applicable_corresponding_parameters = {}
-            successors = []
-            for operation in self.operations:
-                is_applicable, applicable_parameters = self.is_applicable(
-                    state, operation
-                )
-                if is_applicable:
-                    applicable_operations.append(operation)
-                    if operation.name not in applicable_corresponding_parameters:
-                        applicable_corresponding_parameters[
-                            operation.name
-                        ] = applicable_parameters
-                    else:
-                        applicable_corresponding_parameters[
-                            operation.name
-                        ] += applicable_parameters
-                    successor_states = get_next_state(
-                        state, operation, applicable_parameters
-                    )
-                    successors += successor_states
-            return (
-                successors,
-                applicable_operations,
-                applicable_corresponding_parameters,
-            )
-        elif method == "successor_generator":
-            return []
 
     def execute_heuristic(self, state, name: str) -> Tuple[int, Action]:
         if name == LamaEnv.FF:
@@ -180,9 +75,6 @@ class LamaEnv:
 
     def Landmarks(self, state: State) -> Tuple[int, List[Action]]:
         return 0, self.operations
-
-    def get_successors(self, state: State) -> List[State]:
-        return []
 
     def get_operator(self, state: State, successor: State) -> Action:
         return self.operations[0]
@@ -202,7 +94,7 @@ class LamaEnv:
             self.priority[self.pref[LamaEnv.FF]] += 1000
             self.priority[self.pref[LamaEnv.LM]] += 1000
 
-        successors = self.get_successors(state)
+        successors = self.planning_task.get_next_states(state)
         for successor in successors:
             for h in heuristics:
                 self.reg[h].append(successor)  # Deferred evaluation
@@ -211,11 +103,6 @@ class LamaEnv:
                     self.pref[LamaEnv.FF].append(successor)
                     self.pref[LamaEnv.LM].append(successor)
 
-    def satisfies_goal(self, state: State):
-        return self.positive_goals.intersection(
-            state
-        ) == self.positive_goals and not self.negative_goals.intersection(state)
-
     def greedy_BFS_Lama(self) -> Tuple[int, List[State]]:
         self.init_variables()  # Initialize FF and landmark heuristics
         closed_list = []
@@ -223,7 +110,7 @@ class LamaEnv:
 
         while True:
             if current_state not in closed_list:
-                if self.satisfies_goal(current_state):
+                if self.planning_task.is_goal_reached(current_state):
                     return 1, closed_list
                 closed_list.append(current_state)
                 self.expand_state(current_state)
@@ -294,26 +181,24 @@ class LamaEnv:
     def get_shared_preconditions(self, RRPG: DiGraph) -> Iterable[Landmark]:
         preconditions: Optional[Set[Fact]] = None
         npreconditions: Optional[Set[Fact]] = None
+        a = Operator()
+        a.neg_preconditions
         for operation in RRPG.nodes:
             if preconditions is None:
-                preconditions = operation.positive_preconditions
+                preconditions = operation.pos_preconditions
             else:
-                preconditions = preconditions.intersection(
-                    operation.positive_preconditions
-                )
+                preconditions = preconditions.intersection(operation.pos_preconditions)
             if npreconditions is None:
-                npreconditions = npreconditions.negative_preconditions
+                npreconditions = npreconditions.neg_preconditions
             else:
                 npreconditions = npreconditions.intersection(
-                    operation.negative_preconditions
+                    operation.neg_preconditions
                 )
 
         return self.get_landmarks_iterator(preconditions, npreconditions)
 
     def identify_landmarks(self):
-        initial_landmarks = self.get_landmarks_iterator(
-            self.positive_goals, self.negative_goals
-        )
+        initial_landmarks = self.get_landmarks_iterator(self.goals, {})
         # Landmark graph starts with all goals, no orderings
         self.LG.add_nodes_from(initial_landmarks)
 
@@ -331,24 +216,49 @@ class LamaEnv:
 
             # further_orderings.append() # Voir cette ligne plus tard, souci d'efficiency
 
+    def get_reached(
+        self, state: State, accepted_landmarks: Set[Landmark]
+    ) -> Set[Landmark]:
+        return {
+            landmark
+            for landmark in self.LG.nodes
+            if state.issubset(landmark.facts)
+            and all(
+                neighbour in accepted_landmarks
+                for neighbour in self.LG.neighbors(landmark)
+            )
+        }
 
-if __name__ == "__main__":
-    parser = PDDL_Parser()
+    def LM_count_heuristic(self, state: State, plan: LandmarkPlan):
+        if len(plan) == 0:
+            self.accepted[(state, plan)] = set(
+                node for node, out_degree in self.LG.out_degree() if out_degree == 0
+            )
+        else:
+            plan_bis = plan[:-1]
+            parent = plan_bis[-1] # self.accepted[(parent, plan_bis)] has been calculated before
+            reached = self.get_reached(state, self.accepted[(parent, plan_bis)])
+            self.accepted[(state, plan)] = self.accepted[(parent, plan_bis)].union(
+                reached
+            )
 
-    domain = "./instances/groupe2/domain.pddl"
-    problem = "./instances/groupe2/problem0.pddl"
-    parser.parse_domain(domain)
-    parser.parse_problem(problem)
-    heuristic = len
-    lama = LamaEnv(parser, heuristic)
+        not_accepted = self.LG.nodes - self.accepted[(state, plan)]
+        req_goal = {
+            landmark
+            for landmark in self.accepted[(state, plan)]
+            if not state.issubset(landmark) and self.goals.issubset(landmark)
+        }
+        req_precon = {
+            landmark
+            for landmark in self.accepted[(state, plan)]
+            if not state.issubset(landmark)
+            and len(
+                {
+                    neighbour
+                    for neighbour in self.LG.neighbors(landmark)
+                    if not neighbour not in self.accepted[(state, plan)]
+                }
+            )
+        }
 
-    # test get_successors method :
-
-    successors, applicable_operations, applicable_parameters = lama.get_successors(
-        lama.initial_state
-    )
-
-    print(len(successors))
-
-    for successor in successors:
-        print([list(i) for i in successor if not i[0] == "adjacent"])
+        return len(req_goal.union(req_precon, not_accepted))
