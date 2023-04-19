@@ -1,7 +1,7 @@
 
-from grounder import Grounder
-import pddlparser
-from GraphPlanRelaxed import GraphPlanRelaxed
+from src.grounder import Grounder
+import src.pddlparser as pddlparser
+from sat_planner.GraphPlanRelaxed import GraphPlanRelaxed
 
 
 domain_file = 'instances/groupe3/domain.pddl'

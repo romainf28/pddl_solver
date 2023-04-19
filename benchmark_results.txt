@@ -1,0 +1,372 @@
+Using SAT solver
+A plan was found. Ellapsed time : 2.746177911758423
+(move pos62 pos61)
+  POS PRE: (at pos62)
+  NEG PRE: (obstacle pos61)
+  ADD: (at pos61)
+  DEL: (at pos62)
+
+========================================================
+
+
+Using SAT solver
+A plan was found. Ellapsed time : 2.6269655227661133
+(move pos62 pos52)
+  POS PRE: (at pos62)
+  NEG PRE: (obstacle pos52)
+  ADD: (at pos52)
+  DEL: (at pos62)
+
+========================================================
+
+
+(move pos52 pos51)
+  POS PRE: (at pos52)
+  NEG PRE: (obstacle pos51)
+  ADD: (at pos51)
+  DEL: (at pos52)
+
+========================================================
+
+
+(move pos51 pos41)
+  POS PRE: (at pos51)
+  NEG PRE: (obstacle pos41)
+  ADD: (at pos41)
+  DEL: (at pos51)
+
+========================================================
+
+
+(move pos41 pos31)
+  POS PRE: (at pos41)
+  NEG PRE: (obstacle pos31)
+  ADD: (at pos31)
+  DEL: (at pos41)
+
+========================================================
+
+
+(shoot pos31 pos21)
+  POS PRE: (at pos31)
+  POS PRE: (munition)
+  DEL: (obstacle pos21)
+  DEL: (munition)
+
+========================================================
+
+
+(move pos31 pos21)
+  POS PRE: (at pos31)
+  NEG PRE: (obstacle pos21)
+  ADD: (at pos21)
+  DEL: (at pos31)
+
+========================================================
+
+
+(move pos21 pos11)
+  POS PRE: (at pos21)
+  NEG PRE: (obstacle pos11)
+  ADD: (at pos11)
+  DEL: (at pos21)
+
+========================================================
+
+
+Using A* planner with landmarks heuristic
+A plan was found. Ellapsed time : 0.053803205490112305
+(move pos62 pos52)
+  POS PRE: (at pos62)
+  NEG PRE: (obstacle pos52)
+  ADD: (at pos52)
+  DEL: (at pos62)
+
+========================================================
+
+
+(shoot pos52 pos42)
+  POS PRE: (munition)
+  POS PRE: (at pos52)
+  DEL: (munition)
+  DEL: (obstacle pos42)
+
+========================================================
+
+
+(move pos52 pos42)
+  POS PRE: (at pos52)
+  NEG PRE: (obstacle pos42)
+  ADD: (at pos42)
+  DEL: (at pos52)
+
+========================================================
+
+
+(move pos42 pos32)
+  POS PRE: (at pos42)
+  NEG PRE: (obstacle pos32)
+  ADD: (at pos32)
+  DEL: (at pos42)
+
+========================================================
+
+
+(move pos32 pos22)
+  POS PRE: (at pos32)
+  NEG PRE: (obstacle pos22)
+  ADD: (at pos22)
+  DEL: (at pos32)
+
+========================================================
+
+
+(move pos22 pos12)
+  POS PRE: (at pos22)
+  NEG PRE: (obstacle pos12)
+  ADD: (at pos12)
+  DEL: (at pos22)
+
+========================================================
+
+
+(move pos12 pos11)
+  POS PRE: (at pos12)
+  NEG PRE: (obstacle pos11)
+  ADD: (at pos11)
+  DEL: (at pos12)
+
+========================================================
+
+
+Using A* planner with landmarks heuristic
+A plan was found. Ellapsed time : 0.11341094970703125
+(move pos82 pos83)
+  POS PRE: (at pos82)
+  NEG PRE: (obstacle pos83)
+  ADD: (at pos83)
+  DEL: (at pos82)
+
+========================================================
+
+
+(move pos83 pos84)
+  POS PRE: (at pos83)
+  NEG PRE: (obstacle pos84)
+  ADD: (at pos84)
+  DEL: (at pos83)
+
+========================================================
+
+
+(move pos84 pos74)
+  POS PRE: (at pos84)
+  NEG PRE: (obstacle pos74)
+  ADD: (at pos74)
+  DEL: (at pos84)
+
+========================================================
+
+
+(move pos74 pos64)
+  POS PRE: (at pos74)
+  NEG PRE: (obstacle pos64)
+  ADD: (at pos64)
+  DEL: (at pos74)
+
+========================================================
+
+
+(move pos64 pos54)
+  POS PRE: (at pos64)
+  NEG PRE: (obstacle pos54)
+  ADD: (at pos54)
+  DEL: (at pos64)
+
+========================================================
+
+
+(move pos54 pos44)
+  POS PRE: (at pos54)
+  NEG PRE: (obstacle pos44)
+  ADD: (at pos44)
+  DEL: (at pos54)
+
+========================================================
+
+
+(move pos44 pos34)
+  POS PRE: (at pos44)
+  NEG PRE: (obstacle pos34)
+  ADD: (at pos34)
+  DEL: (at pos44)
+
+========================================================
+
+
+(move pos34 pos33)
+  POS PRE: (at pos34)
+  NEG PRE: (obstacle pos33)
+  ADD: (at pos33)
+  DEL: (at pos34)
+
+========================================================
+
+
+(move pos33 pos23)
+  POS PRE: (at pos33)
+  NEG PRE: (obstacle pos23)
+  ADD: (at pos23)
+  DEL: (at pos33)
+
+========================================================
+
+
+(move pos23 pos13)
+  POS PRE: (at pos23)
+  NEG PRE: (obstacle pos13)
+  ADD: (at pos13)
+  DEL: (at pos23)
+
+========================================================
+
+
+(move pos13 pos12)
+  POS PRE: (at pos13)
+  NEG PRE: (obstacle pos12)
+  ADD: (at pos12)
+  DEL: (at pos13)
+
+========================================================
+
+
+(move pos12 pos11)
+  POS PRE: (at pos12)
+  NEG PRE: (obstacle pos11)
+  ADD: (at pos11)
+  DEL: (at pos12)
+
+========================================================
+
+
+Using A* planner with landmarks heuristic
+A plan was found. Ellapsed time : 0.09989380836486816
+(move pos82 pos83)
+  POS PRE: (at pos82)
+  NEG PRE: (obstacle pos83)
+  ADD: (at pos83)
+  DEL: (at pos82)
+
+========================================================
+
+
+Using A* planner with landmarks heuristic
+A plan was found. Ellapsed time : 0.11849451065063477
+(move pos82 pos83)
+  POS PRE: (at pos82)
+  NEG PRE: (obstacle pos83)
+  ADD: (at pos83)
+  DEL: (at pos82)
+
+========================================================
+
+
+(move pos83 pos73)
+  POS PRE: (at pos83)
+  NEG PRE: (obstacle pos73)
+  ADD: (at pos73)
+  DEL: (at pos83)
+
+========================================================
+
+
+(move pos73 pos74)
+  POS PRE: (at pos73)
+  NEG PRE: (obstacle pos74)
+  ADD: (at pos74)
+  DEL: (at pos73)
+
+========================================================
+
+
+(move pos74 pos64)
+  POS PRE: (at pos74)
+  NEG PRE: (obstacle pos64)
+  ADD: (at pos64)
+  DEL: (at pos74)
+
+========================================================
+
+
+(move pos64 pos54)
+  POS PRE: (at pos64)
+  NEG PRE: (obstacle pos54)
+  ADD: (at pos54)
+  DEL: (at pos64)
+
+========================================================
+
+
+(move pos54 pos44)
+  POS PRE: (at pos54)
+  NEG PRE: (obstacle pos44)
+  ADD: (at pos44)
+  DEL: (at pos54)
+
+========================================================
+
+
+(move pos44 pos34)
+  POS PRE: (at pos44)
+  NEG PRE: (obstacle pos34)
+  ADD: (at pos34)
+  DEL: (at pos44)
+
+========================================================
+
+
+(move pos34 pos24)
+  POS PRE: (at pos34)
+  NEG PRE: (obstacle pos24)
+  ADD: (at pos24)
+  DEL: (at pos34)
+
+========================================================
+
+
+(move pos24 pos23)
+  POS PRE: (at pos24)
+  NEG PRE: (obstacle pos23)
+  ADD: (at pos23)
+  DEL: (at pos24)
+
+========================================================
+
+
+(move pos23 pos13)
+  POS PRE: (at pos23)
+  NEG PRE: (obstacle pos13)
+  ADD: (at pos13)
+  DEL: (at pos23)
+
+========================================================
+
+
+(move pos13 pos12)
+  POS PRE: (at pos13)
+  NEG PRE: (obstacle pos12)
+  ADD: (at pos12)
+  DEL: (at pos13)
+
+========================================================
+
+
+(move pos12 pos11)
+  POS PRE: (at pos12)
+  NEG PRE: (obstacle pos11)
+  ADD: (at pos11)
+  DEL: (at pos12)
+
+========================================================
+
+
