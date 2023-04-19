@@ -20,7 +20,7 @@ if __name__ == '__main__':
         "--output_file", help="path to the file to store the outputs", default="benchmark_results.txt")
     args = parser.parse_args()
 
-    f = open(args.output_file, 'w')
+    f = open(args.output_file, 'a')
     print('Using A* planner with landmarks heuristic ... ')
     print('Using A* planner with landmarks heuristic', file=f)
     t0 = time.time()
