@@ -42,9 +42,13 @@ if __name__ == '__main__':
         print('A plan was found. Ellapsed time : {}'.format(
             time.time()-t0), file=f)
         print('Oprerators of the plan : ')
+        state = task.initial_state
         for op in plan:
             print(op)
             print(op, file=f)
             print("========================================================",
                   file=f)
             print("\n", file=f)
+            if op.applicable(state):
+                state = op.apply(state)
+        assert task.goals.issubset(state), "solution not valid"
