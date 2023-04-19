@@ -1,7 +1,3 @@
-;
-;
-;
-
 (define (problem military-race-1)
     (:domain military-race)
     (:objects
